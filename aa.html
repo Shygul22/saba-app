@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification with Data Sending</title>
+</head>
+<body>
+    <button onclick="showNotification('Task Reminder', 'You have a pending task.', 'path/to/icon.png')">Show Notification</button>
+    <script>
+        // Request notification permission on page load
+if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+        if (permission !== 'granted') {
+            alert('You have blocked notifications.');
+        }
+    });
+}
+
+function showNotification(title, message, icon) {
+    // Check if the browser supports notifications
+    if (!("Notification" in window)) {
+        alert("This browser does not support desktop notifications.");
+        return;
+    }
+
+    // Check if notification permissions have already been granted
+    if (Notification.permission === "granted") {
+        createNotification(title, message, icon);
+    } 
+    // Otherwise, ask the user for permission
+    else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+                createNotification(title, message, icon);
+            }
+        });
+    }
+}
+
+function createNotification(title, message, icon) {
+    // Create the notification
+    const notification = new Notification(title, {
+        body: message,
+        icon: icon,
+        actions: [
+            { action: 'complete', title: 'Complete' },
+            { action: 'not_complete', title: 'Not Complete' }
+        ],
+        requireInteraction: true
+    });
+
+    // Listen for notification clicks or actions
+    notification.onclick = function (event) {
+        event.preventDefault(); // Prevent the browser from focusing the notification
+
+        if (event.action === 'complete') {
+            sendDataToServer({ taskStatus: 'complete' });
+        } else if (event.action === 'not_complete') {
+            sendDataToServer({ taskStatus: 'not_complete' });
+        } else {
+            sendDataToServer({ taskStatus: 'notification_clicked' });
+        }
+
+        notification.close();
+    };
+}
+
+function sendDataToServer(data) {
+    // Example URL where data will be sent
+    const url = 'https://example.com/update-task-status';
+
+    // Send a POST request to the server with the data
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+    </script>
+</body>
+</html>

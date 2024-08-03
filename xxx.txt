@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <input type="text" id="taskInput" placeholder="Enter task">
+    <input type="datetime-local" id="taskReminder">
+    <button id="addTaskButton">Add Task</button>
+    <ul id="taskList"></ul>
+
+   <!-- Modal HTML -->
+<div id="taskModal">
+    <p id="taskModalMessage"></p>
+    <p id="taskModalTime"></p> <!-- Time remaining or "Reminder time reached!" -->
+    <button id="taskCompleteButton">Complete</button>
+    <button id="taskNotCompleteButton">Not Complete</button>
+    <button id="taskModalCloseButton">Close</button>
+</div>
+
+
+    <!-- Custom sound -->
+    <audio id="customSound" src="notification-sound.mp3" preload="auto"></audio>
+<style>
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <input type="text" id="taskInput" placeholder="Enter task">
+    <input type="datetime-local" id="taskReminder">
+    <button id="addTaskButton">Add Task</button>
+    <ul id="taskList"></ul>
+
+   <!-- Modal HTML -->
+<div id="taskModal">
+    <p id="taskModalMessage"></p>
+    <p id="taskModalTime"></p> <!-- Time remaining or "Reminder time reached!" -->
+    <button id="taskCompleteButton">Complete</button>
+    <button id="taskNotCompleteButton">Not Complete</button>
+    <button id="taskModalCloseButton">Close</button>
+</div>
+
+
+    <!-- Custom sound -->
+    <audio id="customSound" src="notification-sound.mp3" preload="auto"></audio>
+<style>
+    
+</style>
+    <script src="./script.js"></script>
+</body>
+</html>
+
+</style>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const addTaskButton = document.getElementById('addTaskButton');
+    const taskInput = document.getElementById('taskInput');
+    const taskReminder = document.getElementById('taskReminder');
+    const taskList = document.getElementById('taskList');
+    const customSound = document.getElementById('customSound');
+
+    let reminderIntervals = new Map();
+    let notificationIntervals = new Map();
+
+    function loadTasks() {
+        const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        tasks.forEach(task => {
+            const li = createTaskElement(task.text, task.reminderTime, task.completed);
+            taskList.appendChild(li);
+            if (!task.completed) {
+                scheduleReminder(task.text, task.reminderTime, li, li.querySelector('span'));
+                scheduleNotifications(task.text, task.reminderTime, li);
+            }
+        });
+    }
+
+    function saveTasks() {
+        const tasks = [];
+        taskList.querySelectorAll('li').forEach(li => {
+            tasks.push({
+                text: li.firstChild.textContent,
+                reminderTime: li.dataset.reminderTime,
+                completed: li.dataset.completed === 'true'
+            });
+        });
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    function showNotification(title, body) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification(title, { body });
+                }
+            });
+        }
+    }
+
+    function scheduleReminder(taskText, reminderTime, taskElement, timeElement) {
+        const alertThreshold = 5 * 60 * 1000; // 5 minutes in milliseconds
+        let alertShown = false;
+
+        const updateTime = () => {
+            const now = new Date().getTime();
+            const remainingTime = reminderTime - now;
+            
+            if (remainingTime <= 0) {
+                customSound.play();
+                taskElement.style.textDecoration = 'line-through';
+                timeElement.textContent = 'Reminder time reached!';
+
+                // Mark task as 'Not Completed' if no user interaction
+                taskElement.style.color = 'red';
+                taskElement.dataset.completed = 'false';
+                taskElement.firstChild.textContent += " (Not Completed)";
+                
+                showNotification('Task Reminder', `Task "${taskText}" is overdue. It has been marked as "Not Completed".`);
+                saveTasks(); // Save the state to localStorage
+                clearInterval(reminderIntervals.get(taskElement));
+                reminderIntervals.delete(taskElement);
+                clearInterval(notificationIntervals.get(taskElement));
+                notificationIntervals.delete(taskElement);
+                return;
+            }
+
+            if (remainingTime <= alertThreshold && !alertShown) {
+                showNotification('Task Reminder', `Time is running out for task: "${taskText}"`);
+                alertShown = true; // Ensure alert is shown only once
+            }
+
+            timeElement.textContent = `Time left: ${formatTime(remainingTime)}`;
+        };
+
+        updateTime(); // Show initial time
+        const intervalId = setInterval(updateTime, 1000);
+        reminderIntervals.set(taskElement, intervalId);
+    }
+
+    function scheduleNotifications(taskText, reminderTime, taskElement) {
+        const notifyInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        const notify = () => {
+            const now = new Date().getTime();
+            if (reminderTime > now) {
+                showNotification('Task Reminder', `Task "${taskText}" is still incomplete. Remember to complete it!`);
+            }
+        };
+
+        notify(); // Notify immediately
+        const intervalId = setInterval(notify, notifyInterval);
+        notificationIntervals.set(taskElement, intervalId);
+    }
+
+    function createTaskElement(taskText, reminderTime, completed = false) {
+        const li = document.createElement('li');
+        const timeSpan = document.createElement('span');
+        li.dataset.reminderTime = reminderTime;
+        li.dataset.completed = completed;
+
+        if (completed) {
+            li.style.textDecoration = 'line-through';
+            timeSpan.textContent = 'Completed';
+        } else {
+            const remainingTime = reminderTime - new Date().getTime();
+            timeSpan.textContent = `Time left: ${formatTime(remainingTime)}`;
+        }
+
+        li.textContent = taskText;
+        li.appendChild(timeSpan);
+
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.className = 'edit-button'; // Add class for styling
+        editButton.addEventListener('click', (e) => {
+            const editMenu = createEditMenu(li, taskText);
+            const rect = e.target.getBoundingClientRect();
+            editMenu.style.left = `${rect.left}px`;
+            editMenu.style.top = `${rect.bottom}px`;
+        });
+
+        li.appendChild(editButton);
+        return li;
+    }
+
+    function createEditMenu(taskElement, taskText) {
+        const editMenu = document.createElement('div');
+        editMenu.className = 'edit-menu'; // Add class for styling
+        
+        const completeButton = document.createElement('button');
+        completeButton.textContent = 'Completed';
+        completeButton.className = 'edit-button'; // Add class for styling
+        completeButton.addEventListener('click', () => {
+            taskElement.style.textDecoration = 'line-through';
+            taskElement.style.color = ''; // Reset color
+            taskElement.dataset.completed = 'true';
+            taskElement.querySelector('span').textContent = 'Completed';
+            saveTasks(); // Save the state to localStorage
+            clearInterval(notificationIntervals.get(taskElement));
+            notificationIntervals.delete(taskElement);
+            closeEditMenu();
+        });
+
+        const notCompleteButton = document.createElement('button');
+        notCompleteButton.textContent = 'Not Completed';
+        notCompleteButton.className = 'edit-button'; // Add class for styling
+        notCompleteButton.addEventListener('click', () => {
+            taskElement.style.textDecoration = 'none';
+            taskElement.style.color = 'red';
+            taskElement.dataset.completed = 'false';
+            taskElement.querySelector('span').textContent = 'Not Completed';
+            saveTasks(); // Save the state to localStorage
+            scheduleNotifications(taskElement.firstChild.textContent, taskElement.dataset.reminderTime, taskElement); // Reschedule notifications
+            closeEditMenu();
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.className = 'edit-button'; // Add class for styling
+        deleteButton.addEventListener('click', () => {
+            taskList.removeChild(taskElement);
+            clearInterval(reminderIntervals.get(taskElement));
+            reminderIntervals.delete(taskElement);
+            clearInterval(notificationIntervals.get(taskElement));
+            notificationIntervals.delete(taskElement);
+            saveTasks(); // Save the state to localStorage
+            closeEditMenu();
+        });
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.className = 'edit-button'; // Add class for styling
+        closeButton.addEventListener('click', closeEditMenu);
+
+        editMenu.appendChild(completeButton);
+        editMenu.appendChild(notCompleteButton);
+        editMenu.appendChild(deleteButton);
+        editMenu.appendChild(closeButton);
+
+        document.body.appendChild(editMenu);
+
+        function closeEditMenu() {
+            document.body.removeChild(editMenu);
+        }
+
+        return editMenu;
+    }
+
+    addTaskButton.addEventListener('click', () => {
+        const taskText = taskInput.value.trim();
+        const reminderDateTime = taskReminder.value;
+
+        if (taskText === '' || !reminderDateTime) {
+            showNotification('Error', 'Please enter a task and a valid reminder time.');
+            return;
+        }
+
+        const reminderTime = new Date(reminderDateTime).getTime();
+        const li = createTaskElement(taskText, reminderTime);
+        taskList.appendChild(li);
+
+        scheduleReminder(taskText, reminderTime, li, li.querySelector('span'));
+        scheduleNotifications(taskText, reminderTime, li);
+
+        // Clear input fields after adding the task
+        taskInput.value = '';
+        taskReminder.value = '';
+
+        saveTasks(); // Save the state to localStorage
+    });
+
+    loadTasks(); // Load tasks from localStorage when the page is loaded
+});
+</script>
+</body>
+</html>
