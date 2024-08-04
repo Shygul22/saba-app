@@ -8,17 +8,22 @@
 </head>
 <body>
     <h1>Task Manager</h1>
-    <!-- Edit Task Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Edit Task</h2>
-            <button id="completeBtn">Complete</button>
-            <button id="notCompleteBtn">Not Complete</button>
-            <button id="resetBtn">Reset</button>
-            <button id="deleteBtn">Delete</button>
-        </div>
+    <button id="notifyButton">Show Notification</button>
+
+   <!-- Edit Modal HTML -->
+   <div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <p>Task Name: <span id="editTaskNameDisplay"></span></p>
+        <p>Reminder Time: <span id="editReminderTimeDisplay"></span></p>
+        <p id="editCreationTime"></p>
+        <button id="completeBtn">Mark as Complete</button>
+        <button id="notCompleteBtn">Mark as Not Completed</button>
+        <button id="resetBtn">Reset Reminder</button>
+        <button id="deleteBtn">Delete Task</button>
     </div>
+</div>
+
 
     <!-- Task Input and List -->
     <div>
