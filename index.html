@@ -3,36 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Manager</title>
-    <link rel="stylesheet" href="./style.css">
+    <title>Task Management App</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Task Manager</h1>
-    <button id="notifyButton">Show Notification</button>
-
-   <!-- Edit Modal HTML -->
-   <div id="editModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <p>Task Name: <span id="editTaskNameDisplay"></span></p>
-        <p>Reminder Time: <span id="editReminderTimeDisplay"></span></p>
-        <p id="editCreationTime"></p>
-        <button id="completeBtn">Mark as Complete</button>
-        <button id="notCompleteBtn">Mark as Not Completed</button>
-        <button id="resetBtn">Reset Reminder</button>
-        <button id="deleteBtn">Delete Task</button>
+    <h2>Task Management App</h2>
+    <nav>
+        <button id="settingsButton">Settings</button>
+    </nav>
+    <div id="settingsPanel" class="hidden">
+        <div id="themeSelector">
+            <label for="themeSelect">Select Theme:</label>
+            <select id="themeSelect">
+                <option value="default-theme">Default</option>
+                <option value="dark-theme">Dark</option>
+                <option value="light-theme">Light</option>
+            </select>
+        </div>
+        <button id="deleteAllTasksButton">Delete All Tasks</button>
     </div>
-</div>
-
-
-    <!-- Task Input and List -->
-    <div>
+    <div id="taskInputContainer">
         <input type="text" id="taskInput" placeholder="Enter task">
         <input type="datetime-local" id="taskReminder">
         <button id="addTaskButton">Add Task</button>
     </div>
     <ul id="taskList"></ul>
 
-    <script src="./script.js"></script>
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Task</h2>
+            <p id="editTaskNameDisplay"></p>
+            <p id="editReminderTimeDisplay"></p>
+            <p id="editCreationTime"></p>
+            <button id="completeBtn">Mark as Complete</button>
+            <button id="notCompleteBtn">Mark as Not Complete</button>
+            <button id="resetBtn">Reset Reminder</button>
+            <button id="deleteBtn">Delete Task</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
