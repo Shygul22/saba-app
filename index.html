@@ -4,45 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Management App</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <h2>Task Management App</h2>
-    <nav>
-        <button id="settingsButton">Settings</button>
-    </nav>
-    <div id="settingsPanel" class="hidden">
-        <div id="themeSelector">
-            <label for="themeSelect">Select Theme:</label>
-            <select id="themeSelect">
-                <option value="default-theme">Default</option>
-                <option value="dark-theme">Dark</option>
-                <option value="light-theme">Light</option>
-            </select>
-        </div>
-        <button id="deleteAllTasksButton">Delete All Tasks</button>
-    </div>
-    <div id="taskInputContainer">
-        <input type="text" id="taskInput" placeholder="Enter task">
-        <input type="datetime-local" id="taskReminder">
-        <button id="addTaskButton">Add Task</button>
-    </div>
+<body class="default-theme">
+
+    <h1>Task Management App</h1>
+    <!-- Task creation form -->
+<input type="text" id="taskInput" placeholder="Enter task">
+<input type="text" id="taskReason" placeholder="Enter reason for the task"> <!-- New task reason input -->
+<input type="datetime-local" id="taskReminder" placeholder="Set Reminder">
+<input type="datetime-local" id="taskDueTime" placeholder="Set Due Time">
+<button id="addTaskButton">Add Task</button>
+
+
+   
+
     <ul id="taskList"></ul>
 
-    <div id="editModal" class="modal">
+    <button id="deleteAllTasksButton">Delete All Tasks</button>
+
+    <div id="settingsPanel" class="hidden">
+        <label for="themeSelect">Select Theme:</label>
+        <select id="themeSelect">
+            <option value="default-theme">Default Theme</option>
+            <option value="dark-theme">Dark Theme</option>
+        </select>
+    </div>
+    <button id="settingsButton">Settings</button>
+
+    <div id="editModal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>Edit Task</h2>
             <p id="editTaskNameDisplay"></p>
-            <p id="editReminderTimeDisplay"></p>
             <p id="editCreationTime"></p>
-            <button id="completeBtn">Mark as Complete</button>
-            <button id="notCompleteBtn">Mark as Not Complete</button>
+            <p id="editTaskReasonDisplay"></p> <!-- New element for task reason -->
+            <p id="editReminderTimeDisplay"></p>
+          
+            <p id="editDueTimeDisplay"></p>
+            <p id="editDueTimeDisplay"></p> 
+            <button id="completeBtn">Complete</button>
+            <button id="notCompleteBtn">Not Complete</button>
             <button id="resetBtn">Reset Reminder</button>
             <button id="deleteBtn">Delete Task</button>
         </div>
     </div>
+<!-- Custom Modal for Yes/No Confirmation -->
+<div id="confirmationModal" class="modal">
+    <div class="modal-content">
+        <p id="modalMessage"></p>
+        <button id="yesButton">Yes</button>
+        <button id="noButton">No</button>
+    </div>
+</div>
 
-    <script src="script.js"></script>
+   <script src="./script.js"></script>
 </body>
 </html>

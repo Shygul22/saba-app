@@ -3,12 +3,14 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
+  background-color: var(--background-color, #f4f4f4);
+  color: var(--text-color, #333);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 h1 {
   text-align: center;
-  color: #333;
+  color: inherit;
   margin: 20px 0;
 }
 
@@ -18,15 +20,10 @@ div {
   margin: 20px;
 }
 
-input[type="text"] {
-  padding: 10px;
-  width: 300px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
+input[type="text"],
 input[type="datetime-local"] {
   padding: 10px;
+  width: 300px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
@@ -40,10 +37,12 @@ button {
   background-color: #007bff;
   cursor: pointer;
   font-size: 16px;
+  transition: background-color 0.3s, opacity 0.3s;
 }
 
 button:hover {
   background-color: #0056b3;
+  opacity: 0.8;
 }
 
 /* Task List */
@@ -66,7 +65,8 @@ li {
 }
 
 /* Modal Styles */
-.modal {
+.modal,
+#editModal {
   display: none;
   position: fixed;
   z-index: 1;
@@ -75,18 +75,20 @@ li {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgb(0,0,0);
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0, 0, 0, 0.4);
+  padding-top: 60px;
 }
 
-.modal-content {
-  background-color: #fefefe;
+.modal-content,
+#editModal .modal-content {
+  background-color: #fff;
   margin: 15% auto;
   padding: 20px;
   border: 1px solid #888;
   width: 80%;
   max-width: 500px;
   border-radius: 8px;
+  text-align: center;
 }
 
 .close {
@@ -94,32 +96,49 @@ li {
   float: right;
   font-size: 28px;
   font-weight: bold;
+  cursor: pointer;
 }
 
 .close:hover,
 .close:focus {
   color: #000;
   text-decoration: none;
+}
+
+/* Modal Button Styles */
+.modal-content button,
+#editModal .modal-content button {
+  margin: 5px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  color: #fff;
   cursor: pointer;
 }
 
-.modal-content button {
-  margin: 5px;
-  background-color: #28a745;
-}
-
-.modal-content button#notCompleteBtn {
+#notCompleteBtn {
   background-color: #dc3545;
 }
 
-.modal-content button#resetBtn {
+#resetBtn {
   background-color: #ffc107;
 }
 
-.modal-content button#deleteBtn {
+#deleteBtn {
   background-color: #6c757d;
 }
 
-.modal-content button:hover {
-  opacity: 0.8;
+/* Theme Styles */
+body.default-theme {
+  --background-color: #f0f0f0;
+  --text-color: #333;
+}
+
+body.dark-theme {
+  --background-color: #333;
+  --text-color: #f0f0f0;
+}
+
+/* Settings Panel */
+#settingsPanel.hidden {
+  display: none;
 }
