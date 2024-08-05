@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
     const addTaskButton = document.getElementById('addTaskButton');
     const taskInput = document.getElementById('taskInput');
     const taskReasonInput = document.getElementById('taskReason');
@@ -28,52 +29,54 @@ document.addEventListener('DOMContentLoaded', () => {
         tasks.forEach(task => {
             const li = createTaskElement(task.text, task.reason, task.reminderTime, task.dueTime, task.completed, task.creationTime);
             taskList.appendChild(li);
-            if (task.reminderTime > new Date().getTime()) {
+            if (task.reminderTime > Date.now()) {
                 scheduleReminder(task.text, task.reminderTime, li, li.querySelector('span'));
             }
         });
-        sortTasks();
     }
 
     function addNewTask(taskText, taskReason, reminderTime, dueTime) {
         const creationTime = new Date().toISOString();
         const li = createTaskElement(taskText, taskReason, reminderTime, dueTime, false, creationTime);
         taskList.appendChild(li);
-        if (reminderTime > new Date().getTime()) {
+        if (reminderTime > Date.now()) {
             scheduleReminder(taskText, reminderTime, li, li.querySelector('span'));
         }
         saveTasks();
-        sortTasks();
     }
 
     addTaskButton.addEventListener('click', () => {
-        const taskText = taskInput.value;
-        const taskReason = taskReasonInput.value;
-        const reminderTime = new Date(taskReminder.value).getTime();
-        const dueTime = new Date(taskDueTime.value).getTime();
-        if (taskText && taskReason && !isNaN(reminderTime) && !isNaN(dueTime)) {
+        const taskText = taskInput.value.trim();
+        const taskReason = taskReasonInput.value.trim();
+        const reminderTime = parseDateTime(taskReminder.value);
+        const dueTime = parseDateTime(taskDueTime.value);
+
+        if (taskText && taskReason && reminderTime && dueTime) {
             addNewTask(taskText, taskReason, reminderTime, dueTime);
-            taskInput.value = '';
-            taskReasonInput.value = '';
-            taskReminder.value = '';
-            taskDueTime.value = '';
         } else {
             alert('Please enter valid task details.');
         }
+
+        taskInput.value = '';
+        taskReasonInput.value = '';
+        taskReminder.value = '';
+        taskDueTime.value = '';
     });
 
+    function parseDateTime(value) {
+        const dateTime = new Date(value);
+        return dateTime.getTime() ? dateTime.getTime() : null;
+    }
+
     function saveTasks() {
-        const tasks = [];
-        taskList.querySelectorAll('li').forEach(li => {
-            tasks.push({
-                text: li.dataset.text,
-                reason: li.dataset.reason,
-                reminderTime: li.dataset.reminderTime,
-                dueTime: li.dataset.dueTime,
-                completed: li.dataset.completed === 'true',
-                creationTime: li.dataset.creationTime
-            });
-        });
+        const tasks = Array.from(taskList.querySelectorAll('li')).map(li => ({
+            text: li.dataset.text,
+            reason: li.dataset.reason,
+            reminderTime: li.dataset.reminderTime,
+            dueTime: li.dataset.dueTime,
+            completed: li.dataset.completed === 'true',
+            creationTime: li.dataset.creationTime
+        }));
         localStorage.setItem('tasks', JSON.stringify(tasks));
     }
 
@@ -82,50 +85,82 @@ document.addEventListener('DOMContentLoaded', () => {
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        return `${hours}h ${minutes}m ${seconds}s`;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+
+        return `${hour12}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} ${ampm}`;
     }
 
     function scheduleReminder(taskText, reminderTime, taskElement, timeElement) {
-        const alertThreshold = 3 * 60 * 1000; // 3 minutes in milliseconds
-        const dueAlertThreshold = 30 * 60 * 1000; // 30 minutes in milliseconds
-        const now = new Date().getTime();
-        const remainingTime = reminderTime - now;
-        const dueTime = parseInt(taskElement.dataset.dueTime);
-        const remainingDueTime = dueTime - now;
-
-        const updateTime = () => {
-            const currentTime = new Date().getTime();
-            const updatedRemainingTime = reminderTime - currentTime;
-            const updatedRemainingDueTime = dueTime - currentTime;
-
+        const alertThreshold = 3 * 60 * 1000; // 3 minutes
+        const dueAlertThreshold = 30 * 60 * 1000; // 30 minutes
+    
+        const notificationsShown = {
+            reminderPassed: false,
+            dueTimeApproaching: false,
+            dueTimePassed: false
+        };
+    
+        function updateTime() {
+            const now = Date.now();
+            const remainingTime = reminderTime - now;
+            const dueTime = parseInt(taskElement.dataset.dueTime, 10);
+            const remainingDueTime = dueTime - now;
+    
             if (taskElement.dataset.completed === 'true') {
                 clearInterval(reminderIntervals.get(taskElement));
                 reminderIntervals.delete(taskElement);
                 return;
             }
-
-            if (updatedRemainingTime <= 0) {
-                // Task is due or overdue
+    
+            if (remainingTime <= 0) {
                 clearInterval(reminderIntervals.get(taskElement));
                 reminderIntervals.delete(taskElement);
                 timeElement.innerHTML = 'Reminder time has passed.';
-                return;
-            }
-
-            // Update reminder time display
-            if (updatedRemainingTime <= alertThreshold) {
-                timeElement.innerHTML = `Reminder in ${Math.ceil(updatedRemainingTime / 60000)} minutes`;
+                if (!notificationsShown.reminderPassed) {
+                    showNotification('Task Reminder', {
+                        body: `The reminder time for "${taskText}" has passed.`,
+                        icon: 'path/to/icon.png' // Optional: Replace with an icon path
+                    });
+                    notificationsShown.reminderPassed = true;
+                }
             } else {
-                timeElement.innerHTML = `Time left: ${formatTime(updatedRemainingTime)}`;
+                timeElement.innerHTML = remainingTime <= alertThreshold ?
+                    `Reminder in ${Math.ceil(remainingTime / 60000)} minutes` :
+                    `Time left: ${formatTime(remainingTime)}`;
             }
-
-            // Check for due time alert
-            if (updatedRemainingDueTime <= dueAlertThreshold && updatedRemainingDueTime > 0) {
-                if (!taskElement.querySelector('.due-alert')) {
-                    const alertElement = document.createElement('div');
+    
+            if (dueTime <= now) {
+                const alertElement = taskElement.querySelector('.due-alert');
+                if (!notificationsShown.dueTimePassed) {
+                    if (alertElement) {
+                        alertElement.innerHTML = `<strong>Due time has passed! Reason: ${taskElement.dataset.reason}</strong>`;
+                    } else {
+                        const newAlertElement = document.createElement('div');
+                        newAlertElement.className = 'due-alert';
+                        newAlertElement.innerHTML = `<strong>Due time has passed! Reason: ${taskElement.dataset.reason}</strong>`;
+                        taskElement.appendChild(newAlertElement);
+                    }
+                    showNotification('Task Due Time Passed', {
+                        body: `The due time for "${taskText}" has passed. Reason: ${taskElement.dataset.reason}`,
+                        icon: 'path/to/icon.png' // Optional: Replace with an icon path
+                    });
+                    notificationsShown.dueTimePassed = true;
+                }
+            } else if (remainingDueTime <= dueAlertThreshold && remainingDueTime > 0) {
+                let alertElement = taskElement.querySelector('.due-alert');
+                if (!alertElement) {
+                    alertElement = document.createElement('div');
                     alertElement.className = 'due-alert';
-                    alertElement.textContent = `Due time approaching in ${Math.ceil(updatedRemainingDueTime / 60000)} minutes!`;
                     taskElement.appendChild(alertElement);
+                }
+                alertElement.innerHTML = `<strong>Due time approaching in ${Math.ceil(remainingDueTime / 60000)} minutes! Reason: ${taskElement.dataset.reason}</strong>`;
+                if (!notificationsShown.dueTimeApproaching) {
+                    showNotification('Task Due Time Approaching', {
+                        body: `The due time for "${taskText}" is approaching in ${Math.ceil(remainingDueTime / 60000)} minutes. Reason: ${taskElement.dataset.reason}`,
+                        icon: 'path/to/icon.png' // Optional: Replace with an icon path
+                    });
+                    notificationsShown.dueTimeApproaching = true;
                 }
             } else {
                 const alertElement = taskElement.querySelector('.due-alert');
@@ -133,15 +168,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     alertElement.remove();
                 }
             }
-        };
-
-        if (remainingTime > 0) {
+        }
+    
+        requestNotificationPermission();
+    
+        if (reminderTime > Date.now()) {
             updateTime();
             const intervalId = setInterval(updateTime, 1000);
             reminderIntervals.set(taskElement, intervalId);
         } else {
-            // Immediate update for overdue tasks
             timeElement.innerHTML = 'Reminder time has passed.';
+            if (!notificationsShown.reminderPassed) {
+                showNotification('Task Reminder', {
+                    body: `The reminder time for "${taskText}" has passed.`,
+                    icon: 'path/to/icon.png' // Optional: Replace with an icon path
+                });
+                notificationsShown.reminderPassed = true;
+            }
+        }
+    }
+
+    function showNotification(title, options) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, options);
+        }
+    }
+
+    function requestNotificationPermission() {
+        if (Notification.permission !== 'granted') {
+            Notification.requestPermission();
         }
     }
 
@@ -163,31 +218,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createTaskElement(taskText, taskReason, reminderTime, dueTime, completed = false, creationTime) {
         const li = document.createElement('li');
-        li.textContent = `${taskText}`;
+        li.textContent = taskText;
         li.dataset.text = taskText;
         li.dataset.reason = taskReason;
         li.dataset.reminderTime = reminderTime;
         li.dataset.dueTime = dueTime;
         li.dataset.completed = completed;
         li.dataset.creationTime = creationTime;
-
+    
         const span = document.createElement('span');
         li.appendChild(span);
         li.style.color = completed ? 'green' : 'black';
         li.style.textDecoration = completed ? 'line-through' : 'none';
-
-        // Display the due alert if applicable
-        if (dueTime > new Date().getTime()) {
-            const dueAlertElement = document.createElement('div');
-            dueAlertElement.className = 'due-alert';
-            li.appendChild(dueAlertElement);
-        }
-
+    
+        scheduleReminder(taskText, reminderTime, li, span);
+    
         li.addEventListener('click', () => {
             currentTaskElement = li;
             openEditModal();
         });
-
+    
         return li;
     }
 
@@ -196,11 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('editTaskNameDisplay').textContent = currentTaskElement.dataset.text;
         document.getElementById('editTaskReasonDisplay').textContent = `Reason: ${currentTaskElement.dataset.reason}`;
-        document.getElementById('editReminderTimeDisplay').textContent = `Reminder Time: ${currentTaskElement.dataset.reminderTime ? new Date(parseInt(currentTaskElement.dataset.reminderTime)).toLocaleString() : 'None'}`;
-        document.getElementById('editCreationTime').textContent = `Created at: ${new Date(currentTaskElement.dataset.creationTime).toLocaleString()}`;
-
-        const dueTime = currentTaskElement.dataset.dueTime ? new Date(parseInt(currentTaskElement.dataset.dueTime)).toLocaleString() : 'None';
-        document.getElementById('editDueTimeDisplay').textContent = `Due Time: ${dueTime}`;
+        document.getElementById('editReminderTimeDisplay').textContent = `Reminder Time: ${currentTaskElement.dataset.reminderTime ? new Date(parseInt(currentTaskElement.dataset.reminderTime)).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true }) : 'None'}`;
+        document.getElementById('editCreationTime').textContent = `Created at: ${new Date(currentTaskElement.dataset.creationTime).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true })}`;
+        document.getElementById('editDueTimeDisplay').textContent = `Due Time: ${currentTaskElement.dataset.dueTime ? new Date(parseInt(currentTaskElement.dataset.dueTime)).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true }) : 'None'}`;
 
         editModal.style.display = 'block';
 
@@ -217,15 +265,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskReason = prompt('Enter new task reason:', currentTaskElement.dataset.reason);
         const newReminderTime = prompt('Enter new reminder time (format: YYYY-MM-DDTHH:MM):', currentTaskElement.dataset.reminderTime ? new Date(parseInt(currentTaskElement.dataset.reminderTime)).toISOString().slice(0, 16) : '');
 
-        if (taskText && taskReason && newReminderTime) {
+        const newReminderTimeMs = parseDateTime(newReminderTime);
+
+        if (taskText && taskReason && newReminderTimeMs) {
             currentTaskElement.dataset.text = taskText;
             currentTaskElement.dataset.reason = taskReason;
-            currentTaskElement.dataset.reminderTime = new Date(newReminderTime).getTime();
+            currentTaskElement.dataset.reminderTime = newReminderTimeMs;
             currentTaskElement.dataset.completed = 'false';
             currentTaskElement.style.color = 'black';
             currentTaskElement.style.textDecoration = 'none';
             saveTasks();
-            scheduleReminder(taskText, new Date(newReminderTime).getTime(), currentTaskElement, currentTaskElement.querySelector('span'));
+            scheduleReminder(taskText, newReminderTimeMs, currentTaskElement, currentTaskElement.querySelector('span'));
             closeEditModal();
         }
     }
@@ -283,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeModal.addEventListener('click', closeEditModal);
 
-    // Initialize
     loadTasks();
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
